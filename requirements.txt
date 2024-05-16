@@ -1,0 +1,5 @@
+pip install python-dotenv
+pip install langchain_core langchain_anthropic
+pip install langchain
+#if using openai APIpip install langchain-openai
+pip install langchain-openai
