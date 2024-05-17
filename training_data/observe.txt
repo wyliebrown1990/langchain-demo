@@ -1,0 +1,110 @@
+Observability Benefits:
+What makes the Observe platform different from others is the architecture. 
+We’ve adopted the use of a data lake for our environment and partnered with Snowflake to achieve this.
+The benefits from this architecture are:
+Reduced storage and compute costs
+Deeper context when conducting investigations
+Faster queries on the backend
+I’ll explain our architecture in more detail so that we can better understand how we achieve these benefits. 
+
+Data Ingestion & GraphLink: 
+Easy ingestion: We’re able to take data from any source in your environment, whether that be (cloud, k8s, OpenTelemetry, or even business level like Github and Zendesk tickets).
+Common DL: We then take this data and place it within a common data lake where we can compress and decompress this data on the fly. 
+By default we store this data for up to 14 months.
+We are then able to create what we call a “datagraph” using our “GraphLink '' Technology. GraphLink enables to: 
+Link data across different sources using primary and foreign keys
+Make temporal correlations by align events and metrics chronologically.
+Create dynamic visualizations, making it easier to navigate complex data correlations.
+What this means is if you’re investigating a container log with errors in your applications you can stay within those logs and ask the pod data if it’s having any restarts. 
+You can seamlessly bring that pod level data into your container logs as a brand new column. 
+This flexible way of joining relational data is a powerful way to add context and conduct quicker investigations. 
+You can reduce your average MTTR and have a real business impact. 
+
+Elasticity (i.e. decouple resources and compress data): 
+Where other platforms license their storage and compute tied together, Observe decouples the two. This allows for high performance in both. 
+Traditional monitoring has this concept of hot, cold and warm storage. Whenever you want to query old data it has to be re-hydrated. This creates a lot of time and effort to troubleshoot. It also makes it complex to decide what to retain. 
+In Observe the data is always hot and compressed and decompressed on the fly. 
+Rather than defining a static amount of compute based on your average or high load we’ve created a multi-tenant datahouse architecture. 
+We assign compute relevant to what you are querying and processing. 
+So that, when using the system heavily you get a lot of compute and high performance and when you’re not using it heavily you aren’t burning money from compute running that you’re not taking advantage of. 
+Decoupling compute and storage along with leveraging the snowflake tables means that we can accomplish 10X compression. Which means every 10tb of data is compressed down to 1tb costing you $23/mo. 
+
+Acceleration (i.e. fast queries on the backend):
+This concept is essentially us achieving speed through materialized views (precomputed tables) within snowflake such that we understand the data coming in so you can query it faster on the backend. 
+Ad-hoc queries run directly through our scheduler, but we run transforms on a consistent basis which means we can batch and transform that data. When a user comes in these transforms are always available and quick to query. 
+We have a scheduler that will understand the query's being run so that if you’re running a lot of small queries we can spread those across a lot of small compute instances in order to load those queries quickly. 
+Vice-versa if you’re running a large query over a long time period then we can utilize large compute instances and split out the query across multiple instances in order to process large amounts of data in an efficient amount of time. 
+
+The last part of our architecture breakdown are our Data Apps: 
+Within the Observe Dashboard you’ll find OOB alerts, monitors, dashboards and shipping mechanisms to get your data in. 
+We align with open source collectors across the board to do this. 
+So for AWS our app will automatically scrape your cloud environment and push out that data via lambda functions. 
+If you have a hybrid or nn-prem environment then you can use any open-source collector you want. 
+We’ve embedded scrapers and agents within our apps so it’s easy to get up and running to collect the content you need. 
+Actually, many of my customers aren’t open source collector experts, and that’s okay because we are! 
+
+Let's hop into the Observe Dashboard to put more of this into context. 
+
+DEMO —----------------------------------->
+
+We’ll start at Datastreams here in the left nav bar: 
+Here you can see your AWS data, Kubernetes, Otel, Github, etc. all coming into this common data lake. 
+Once we have the data instrumented and made available you can hop in to look at the raw data coming in. So let’s do that. 
+As we go through that process of Acceleration we start to build out the things we care about and want to look at from a Kubernetes perspective. 
+Related > Lineage : You can see there are a few different things we’re building out of Kubernetes like API updates and Container Logs. As you move forward the types of resources and entities become more specific. 
+You can then go and query container logs with a good set of information but also understand how a container log transforms to an app log for a specific type of container. 
+Then start to build resources you want to look at within the data like users and manufacturers associated with the data. In order to get a point of view defined by a resource versus just searching through raw events and logs. 
+
+Log Explorer: 
+The LE is designed to be your first stop place to go and explore your data to understand what’s going on. 
+Observe gives you the ability to go through, understand and work with your data without having a pre-applied schema or maintaining an index. You can pull in datasets and build on demand from your data warehouse. Traditionally engineers had to link this across different tools via UIDs and timestamps. 
+You’ll see on the left hand side a number of log datasets and filters that when selected updates the search bar at the top. 
+You can double click on a log cell and start to extract data that’s relevant to you. By grabbing fields you can pull them into your logs view (NOTE: not available in my trial but is in online demo). 
+If you ever want to accelerate the dataset view you’ve created you would “save” and “publish” it (NOTE: demo doesn’t show this and it’s unclear from the portal)
+Using the Downward Carat Field Header : You can easily make connections between two points by adding “related fields” (i.e. status,. duration). 
+You can pull this in as you need it, as you’re investigating. 
+
+Metrics Explorer: 
+From the log explorer you can click into a log, go down into your metrics in the right-side box and look at container CPU metrics in seconds and pull this into the metric explorer. 
+From here 
+
+Logs Use Case: I was recently working with a prospect who wanted to see all of the hits on a particular IP address across a large period of time. Using the Log Explorer we could easily pull in billions of data points and then search those logs for anything that contains this IP address. Once isolated we could then explore the relational fields for commonalities and see where these hits were coming from, at what times and how they impacted the service. 
+
+Metrics Explorer: 
+
+
+Trace Explorer: https://www.youtube.com/watch?v=feX5-RnwsHo 
+If you’re new to traces and coming from a logs background that’s completely fine. 
+When you’re trying to troubleshoot: Where is the issue, where di this fail? Upstream, downstream or within my own code? 
+I’ve heard from customers that adding tracing data can cut down the mean time to resolution from hours to days to as low as 15 minutes because it brings together so much context in a single place. 
+A trace is a representation of a single E2E user request flowing through a distributed system. The trace is made up of a bunch of spans each of which has the trace ID and each span represents some bit of work done by some part of some microservice with metadata saying what work it did, how long it took and what resources were used in that work. 
+You can think of a span as a log with a trace ID on it as well as some context about who its parent is. 
+Trace instrumentation is distinct from pure logging because it propagates that trace ID across the whole request life cycle creating spans and adding attributes and that trace ID to make them useful for debugging. 
+
+How is Tracing data used? 
+Deep inspection of an individual trace:
+If a request went bad and you want to inspect it in detail to see what teh call structure was, where the time was spent, what services were involved, what resources those services were running on. 
+Trace data can show you what services is ran through and eventually lead you to some inefficiency such as making thousands of db calls, or making 1 very long, inefficient db call. 
+Searching across all requests coming into a system or service and refining your search to find slower or more error prone requests. 
+Maybe newer version is running slower
+Maybe requests on 1 specific K8s pod are erroring out while running just fine on another pod
+You narrow down to a smaller set of traces to identify common attributes, resources and patterns. 
+
+Observe Distributed Tracing: 
+We have an API endpoint that’s fully compatible with OpenTel data. 
+We provide a number of tools and scripts to get telemetry data into Observe. 
+We have a Helm Chart if you’re in a K8s environment
+We have scripts and examples in github that show how to use the Otel auto instrumentation with popular languages to get your app instrumented automatically without having to make any code changes. 
+
+Trace Explorer: https://www.youtube.com/watch?v=feX5-RnwsHo 
+If you’re new to traces and coming from a logs background that’s completely fine. 
+When you’re trying to troubleshoot: Where is the issue, where di this fail? Upstream, downstream or within my own code? 
+I’ve heard from customers that adding tracing data can cut down the mean time to resolution from hours to days to as low as 15 minutes because it brings together so much context in a single place. 
+A trace is a representation of a single E2E user request flowing through a distributed system. The trace is made up of a bunch of spans each of which has the trace ID and each span represents some bit of work done by some part of some microservice with metadata saying what work it did, how long it took and what resources were used in that work. 
+You can think of a span as a log with a trace ID on it as well as some context about who its parent is. 
+Trace instrumentation is distinct from pure logging because it propagates that trace ID across the whole request life cycle creating spans and adding attributes and that trace ID to make them useful for debugging. 
+
+Open the Trace Explorer in the Left Nav: 
+When you search for traces in the explorer we return a list of traces that match your traces as well as some summary stats: Span count, Error count, Distribution of latency across all requests in the window, how latency has changed over time. 
+You use these graphs to hone in on 
+Duration chart, group by version, requests with version 1.6.0 are consistently distributing more latency than previous versions. 
